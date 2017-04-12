@@ -1,0 +1,27 @@
+{ "name": "pimatic-onkyneer-remote",
+  "description": "Plugin for remote controlling Pioneer AVRs from model year 2105 and newer and Onkyo AVRs too",
+  "author": "Paul Schmidt",
+  "main": "onkyneer-remote",
+  "files": [
+	"README.md",
+    "onkyneer-remote.js",
+    "onkyneer-remote-config-schema.coffee",
+    "device-config-schema.js"
+  ],
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/saxn-paule/pimatic-onkyneer-remote.git"
+  },
+  "configSchema": "onkyneer-remote-config-schema.coffee",
+  "dependencies": {
+	"onkyo.js": "0.3.0"
+  },
+  "peerDependencies": {
+    "pimatic": "0.9.*"
+  },
+  "engines": {
+    "node": ">0.8.x",
+    "npm": ">1.1.x"
+  }
+}
