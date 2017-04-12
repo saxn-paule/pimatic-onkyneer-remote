@@ -19,7 +19,7 @@ var __bind = function (fn, me) {
   };
 
 module.exports = function (env) {
-  var M, OnkyneerRemotePlugin, OnkyneerRemoteActionProvider, OnkyneerRemoteActionHandler, OnkyneerRemotePlugin, OnkyneerRemoteActionHandler, onkyo, pluginConfig, connected;
+  var M, OnkyneerRemotePlugin, OnkyneerRemoteActionProvider, OnkyneerRemoteActionHandler, OnkyneerRemotePlugin, onkyo, pluginConfig, connected;
   M = env.matcher;
 
   var Promise = env.require('bluebird');
@@ -270,7 +270,6 @@ module.exports = function (env) {
     return OnkyneerRemoteActionHandler;
 
   })(env.actions.ActionHandler);
-  OnkyneerRemoteActionHandler = new OnkyneerRemoteActionHandler;
 
   /**
    * THE AVR SENSOR
