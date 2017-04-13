@@ -33,10 +33,8 @@ module.exports = function (env) {
   var defaultHost = '192.168.0.15';
   var defaultMaxVolume = 98;
 
-  var retryCount = 0;
-  var lastRetry = new Date();
   var currentVolume = 0;
-  var currentDisplay = '';
+  var currentDisplay = 'Not implemented yet';
   var currentStatus = 0;
   var currentInput = '';
   var updateInterval = 2000;
@@ -163,7 +161,7 @@ module.exports = function (env) {
         });
 
         onkyo.on("msg", function(msg){
-          _this.handleData(JSON.stringify(msg));
+          _this.handleData(msg);
         });
 
         onkyo.on("connected", function(host){
@@ -214,7 +212,6 @@ module.exports = function (env) {
      **/
     OnkyneerRemoteActionHandler.prototype.sendCommand = function (command) {
 
-      env.logger.info('Trying to send command...');
       var splittedCommand = command.split('\.');
       var category = splittedCommand[0];
       var func = splittedCommand[1];
@@ -257,8 +254,40 @@ module.exports = function (env) {
     /**
      * Handle the incoming data
      **/
-    OnkyneerRemoteActionHandler.prototype.handleData = function (stringyfiedData) {
-      env.logger.info('Got data: ' + stringyfiedData);
+    OnkyneerRemoteActionHandler.prototype.handleData = function (dataObj) {
+
+
+      if(dataObj) {
+        if (typeof dataObj == 'string' || dataObj instanceof String) {
+          try {
+            dataObj = JSON.parse(dataObj);
+          } catch(e) {
+            // something went wrong
+          }
+        }
+
+        var key = Object.keys(dataObj)[0];
+        var value = dataObj[key];
+
+        switch (key) {
+          case "MVL":
+            currentVolume = value;
+          case "PWR":
+            if (value) {
+              currentStatus = 1;
+            } else {
+              currentStatus = 0;
+            }
+          case "AMT":
+
+          case "IFA":
+
+          case "SLI":
+
+          default:
+          //Do nothing
+        }
+      }
     };
 
     /**
@@ -285,6 +314,8 @@ module.exports = function (env) {
 
   })(env.actions.ActionHandler);
 
+  onkyneerRemoteActionHandler = new OnkyneerRemoteActionHandler;
+
   /**
    * THE AVR SENSOR
    **/
@@ -297,7 +328,7 @@ module.exports = function (env) {
       this.id = config.id;
       this.name = config.name;
       this.attributes = {};
-	  this.intervalTimeoutObject = null;
+	    this.intervalTimeoutObject = null;
 
       var func = (function (_this) {
         return function (attr) {
@@ -313,13 +344,8 @@ module.exports = function (env) {
               };
 
               var getter = (function () {
-                if (retryCount < 3 || (new Date - lastRetry) > 60000) {
-                  if (!onkyo) {
-                    OnkyneerRemoteActionHandler.connect();
-                  } else {
-                    //OnkyneerRemoteActionHandler.sendCommand('volume.status');
-                  }
-                }
+                onkyneerRemoteActionHandler.sendCommand('AUDIO.Volume');
+
                 return Promise.resolve(currentVolume);
               });
               _this.attributes[name].unit = 'dB';
@@ -332,27 +358,20 @@ module.exports = function (env) {
               };
 
               var getter = (function () {
-                if (retryCount < 3 || (new Date - lastRetry) > 60000) {
-                  if (!onkyo) {
-                    OnkyneerRemoteActionHandler.connect();
-                  }
-                }
+                /** TODO: Implement **/
                 return Promise.resolve(currentDisplay);
               });
               break;
-			case 'status':
+            case 'status':
               _this.attributes[name] = {
                 description: name,
                 type: "number"
               };
 
               var getter = (function () {
-                if (retryCount < 3 || (new Date - lastRetry) > 60000) {
-                  if (!onkyo) {
-                    OnkyneerRemoteActionHandler.connect();
-                  }
-                }
-				return Promise.resolve(currentStatus);
+                onkyneerRemoteActionHandler.sendCommand('POWER.Power STATUS');
+
+				        return Promise.resolve(currentStatus);
               });
               break;  
             default:
