@@ -248,19 +248,19 @@ module.exports = function (env) {
         return function (command) {
           switch (command) {
             case 'connect':
-              return OnkyneerRemoteActionHandler.connect();
+              return _this.connect();
               break;
             case 'disconnect':
-              return OnkyneerRemoteActionHandler.disconnect();
+              return _this.disconnect();
               break;
             default:
               /**
                * If no connection to the AVR exists, connect first and send the command afterwards
                **/
               if (!onkyo || !connected) {
-                return OnkyneerRemoteActionHandler.connect(command);
+                return _this.connect(command);
               } else {
-                return OnkyneerRemoteActionHandler.sendCommand(command);
+                return _this.sendCommand(command);
               }
           }
         };
