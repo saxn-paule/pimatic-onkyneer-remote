@@ -39,7 +39,7 @@ module.exports = function (env) {
   var currentInput = '';
   var updateInterval = 2000;
 
-  var Onkyo = require("onkyo.js");
+  var Onkyo = require("./lib/onkyo.js/onkyo");
 
   /**
    * THE PLUGIN ITSELF
@@ -153,11 +153,7 @@ module.exports = function (env) {
 
       if (!connected) {
         onkyo.on("error", function(err){
-          console.log(err);
-        });
-
-        onkyo.on("detected", function(device){
-          console.log(device);
+          env.logger.error(err);
         });
 
         onkyo.on("msg", function(msg){
@@ -165,7 +161,6 @@ module.exports = function (env) {
         });
 
         onkyo.on("connected", function(host){
-          console.log("connected to: "+JSON.stringify(host));
           connected = true;
         });
 
@@ -211,25 +206,38 @@ module.exports = function (env) {
      * Method for sending a command
      **/
     OnkyneerRemoteActionHandler.prototype.sendCommand = function (command) {
-
       var splittedCommand = command.split('\.');
       var category = splittedCommand[0];
       var func = splittedCommand[1];
 
-      var maxVolume = pluginConfig.maxVolume || defaultMaxVolume;
+      if(splittedCommand.length > 2) {
+        var funcValue = splittedCommand[2];
+      }
 
-      var volLevel = (currentVolume + 80.5) * 2;
-      var value = '';
+      var maxVolume = pluginConfig.maxVolume || defaultMaxVolume;
+      var volLevel = (currentVolume + 82) * 2;
 
       /**
        * Handle max volume to avoid damage on user and equipment
       **/
+      if(category === 'AUDIO' && (func === 'Volume Up' || func === 'Volume Up1')) {
+        if(volLevel >= maxVolume) {
+          return 'Vol max reached';
+        }
+      }
+
+      /**
+       * Calculate hexadecimal vol level
+       */
+      if(funcValue && category === 'AUDIO' && func === 'Set Volume') {
+        func = func + '#' + parseInt(funcValue).toString(16).toUpperCase();
+        env.logger.info('slider changed...' + func);
+        //return 'Do nothing';
+      }
 
       if(!onkyo) {
         env.logger.info('no onkyo...creating one');
         var host = pluginConfig.host ? pluginConfig.host : defaultHost;
-
-        env.logger.info('Host: ' + host);
 
         onkyo = Onkyo.init({
           "log": true,
@@ -256,6 +264,7 @@ module.exports = function (env) {
      **/
     OnkyneerRemoteActionHandler.prototype.handleData = function (dataObj) {
 
+      //env.logger.info('got data: ' + JSON.stringify(dataObj));
 
       if(dataObj) {
         if (typeof dataObj == 'string' || dataObj instanceof String) {
@@ -271,7 +280,7 @@ module.exports = function (env) {
 
         switch (key) {
           case "MVL":
-            currentVolume = value;
+            currentVolume = value/2 - 82;
           case "PWR":
             if (value) {
               currentStatus = 1;
