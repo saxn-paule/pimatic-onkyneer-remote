@@ -148,23 +148,22 @@ module.exports = function (env) {
      * Method for establishing connection to the receiver
      **/
     OnkyneerRemoteActionHandler.prototype.connect = function (command) {
+
+      env.logger.info('Connect method called.');
+
+      var _this = this;
+
       if (!connected) {
-        env.logger.info('Client isn\'t connected yet, establish new connection...');
-
-        if(!onkyo) {
-          var host = pluginConfig.host ? pluginConfig.host : defaultHost;
-          onkyo = Onkyo.init({
-            "log": true,
-            "ip": host
-          });
-        }
-
         onkyo.on("error", function(err){
           console.log(err);
         });
 
         onkyo.on("detected", function(device){
           console.log(device);
+        });
+
+        onkyo.on("msg", function(msg){
+          _this.handleData(JSON.stringify(msg));
         });
 
         onkyo.on("connected", function(host){
@@ -175,9 +174,14 @@ module.exports = function (env) {
         onkyo.Connect(function(error, ok){
           if(!error) {
             env.logger.info('Connection successful.');
+
+            if(command) {
+              _this.sendCommand(command);
+            }
+          } else {
+            return 'Error while establishing connection';
           }
         });
-
       }
 
       return 'done';
@@ -188,18 +192,18 @@ module.exports = function (env) {
      **/
     OnkyneerRemoteActionHandler.prototype.disconnect = function () {
       if (onkyo && connected) {
-	    onkyo.Close(function(error, ok){
+	      onkyo.Close(function(error, ok){
           if(!error) {
-			env.logger.info('Disconnected');  
-			connected = false;
-		  }
-		});        
+			      env.logger.info('Disconnected');
+			      connected = false;
+		      }
+		    });
 
         return 'disconnected';
       } else {
-	    if(logLevel === "info") {
-          env.logger.info('Nothing to disconnect from.');
-		}  
+	        if(logLevel === "info") {
+            env.logger.info('Nothing to disconnect from.');
+		      }
       }
 
       return 'disconnected';
@@ -209,12 +213,13 @@ module.exports = function (env) {
      * Method for sending a command
      **/
     OnkyneerRemoteActionHandler.prototype.sendCommand = function (command) {
-    
-	  var splittedCommand = command.split('\.');
+
+      env.logger.info('Trying to send command...');
+      var splittedCommand = command.split('\.');
       var category = splittedCommand[0];
       var func = splittedCommand[1];
-	
-	  var maxVolume = pluginConfig.maxVolume || defaultMaxVolume;
+
+      var maxVolume = pluginConfig.maxVolume || defaultMaxVolume;
 
       var volLevel = (currentVolume + 80.5) * 2;
       var value = '';
@@ -223,21 +228,37 @@ module.exports = function (env) {
        * Handle max volume to avoid damage on user and equipment
       **/
 
-	  onkyo.SendCommand(category, func, function(error, ok){
-		if(!error) {
-			return 'Sent command: ' + command;
-		} else {
-			return 'Error while sending command: ' + command;
-		}
+      if(!onkyo) {
+        env.logger.info('no onkyo...creating one');
+        var host = pluginConfig.host ? pluginConfig.host : defaultHost;
+
+        env.logger.info('Host: ' + host);
+
+        onkyo = Onkyo.init({
+          "log": true,
+          "ip": host
+        });
+      }
+
+      if(!connected) {
+        env.logger.info('Not connected yet, establish new connection');
+        this.connect(command);
+      }
+
+      onkyo.SendCommand(category, func, function(error, ok){
+        if(!error) {
+          return 'Sent command: ' + command;
+        } else {
+          return 'Error while sending command: ' + command;
+        }
       });
-		
     };
 
     /**
      * Handle the incoming data
      **/
     OnkyneerRemoteActionHandler.prototype.handleData = function (stringyfiedData) {
-      
+      env.logger.info('Got data: ' + stringyfiedData);
     };
 
     /**
@@ -254,14 +275,7 @@ module.exports = function (env) {
               return _this.disconnect();
               break;
             default:
-              /**
-               * If no connection to the AVR exists, connect first and send the command afterwards
-               **/
-              if (!onkyo || !connected) {
-                return _this.connect(command);
-              } else {
-                return _this.sendCommand(command);
-              }
+              return _this.sendCommand(command);
           }
         };
       })(this));
